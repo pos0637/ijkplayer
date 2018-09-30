@@ -1127,7 +1127,52 @@ LABEL_RETURN:
     return;
 }
 
+//ALEX[[[
+static unsigned char * sSEIData;
+static jsize sSEIDataLength;
 
+void onExtendDataReceive(const unsigned char * buffer, const int length) {
+    if (!buffer || (length <= 0))
+        return;
+    
+    pthread_mutex_lock(&g_clazz.mutex);
+
+    if (sSEIData)
+        free(sSEIData);
+
+    sSEIData = malloc(length);
+    if (!sSEIData) {
+        pthread_mutex_unlock(&g_clazz.mutex);
+        return;
+    }
+    
+    memcpy(sSEIData, buffer, length);
+    sSEIDataLength = length;
+
+    pthread_mutex_unlock(&g_clazz.mutex);
+
+    ALOGD("=============================== onExtendDataReceive\n");
+}
+
+static jbyteArray
+IjkMediaPlayer_getSEI(JNIEnv *env, jobject thiz)
+{
+    MPTRACE("%s\n", __func__);
+
+    pthread_mutex_lock(&g_clazz.mutex);
+    if (!sSEIData) {
+        pthread_mutex_unlock(&g_clazz.mutex);
+        return NULL;
+    }
+
+    jbyteArray array = (*env)->NewByteArray(env, sSEIDataLength);
+    (*env)->SetByteArrayRegion(env, array, 0, sSEIDataLength, (jbyte*)sSEIData);
+
+    pthread_mutex_unlock(&g_clazz.mutex);
+
+    return array;
+}
+//]]]ALEX
 
 
 
@@ -1180,6 +1225,9 @@ static JNINativeMethod g_methods[] = {
 
     { "native_setLogLevel",     "(I)V",                     (void *) IjkMediaPlayer_native_setLogLevel },
     { "_setFrameAtTime",        "(Ljava/lang/String;JJII)V", (void *) IjkMediaPlayer_setFrameAtTime },
+//ALEX[[[
+    { "_getSEI",               "()[B",                      (void *) IjkMediaPlayer_getSEI },
+//]]]ALEX
 };
 
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)

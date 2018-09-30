@@ -24,6 +24,7 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.widget.DrawerLayout;
@@ -151,6 +152,10 @@ public class VideoActivity extends AppCompatActivity implements TracksFragment.I
             return;
         }
         mVideoView.start();
+
+        //ALEX[[[
+        handler.postDelayed(runnable, 1000);
+        //]]]ALEX
     }
 
     @Override
@@ -249,4 +254,16 @@ public class VideoActivity extends AppCompatActivity implements TracksFragment.I
 
         return mVideoView.getSelectedTrack(trackType);
     }
+
+    //ALEX[[[
+    Handler handler = new Handler();
+    Runnable runnable = new Runnable() {
+        @Override
+        public void run() {
+            byte[] sei = IjkMediaPlayer.getSEI();
+            Log.d("============== SEI", "SEI: " + ((sei != null)? String.valueOf(sei.length): "0"));
+            handler.postDelayed(this, 1000);
+        }
+    };
+    //]]]ALEX
 }

@@ -138,6 +138,62 @@ int64_t get_valid_channel_layout(int64_t channel_layout, int channels)
 }
 #endif
 
+//ALEX[[[
+extern void onExtendDataReceive(const unsigned char * buffer, const int length);
+
+static int getSeiContent(const unsigned char * packet, const int length)
+{
+    #define UUID_SIZE (16)
+    static unsigned char ANNEXB_CODE_LOW[] = { 0x00,0x00,0x01 };
+    static unsigned char ANNEXB_CODE[] = { 0x00,0x00,0x00,0x01 };
+
+    // check NALU start code
+    const unsigned char * data = packet;
+    int startCodeLength;
+    if ((length > sizeof(ANNEXB_CODE_LOW)) && (memcmp(data, ANNEXB_CODE_LOW, sizeof(ANNEXB_CODE_LOW)) == 0))
+        startCodeLength = sizeof(ANNEXB_CODE_LOW);
+    else if ((length > sizeof(ANNEXB_CODE)) && (memcmp(data, ANNEXB_CODE, sizeof(ANNEXB_CODE)) == 0))
+        startCodeLength = sizeof(ANNEXB_CODE);
+    else
+        return -1;
+
+    // check NALU type
+    if ((*(data + startCodeLength) & 0x1F) != 6)
+        return -1;
+
+    const unsigned char * sei = data + startCodeLength + 1;
+    int rest = length - startCodeLength - 1;
+    int seiType = 0, seiSize = 0;
+
+    // SEI Payload Type
+    do { seiType += *sei; } while ((*sei++ == 0xFF) && (rest-- >= 0));
+
+    // SEI Payload Size
+    do { seiSize += *sei; } while ((*sei++ == 0xFF) && (rest-- >= 0));
+
+    if (rest <= 0)
+        return -1;
+
+    // check length of SEI
+    if ((seiType == 5) && (seiSize >= UUID_SIZE) && (seiSize <= rest)) {
+        onExtendDataReceive(sei, seiSize);
+        return (sei - data) + seiSize;
+    }
+    else {
+        return -1;
+    }
+}
+
+static void getSei(unsigned char * packet, int length) {
+    int naluLength = 0;
+    do {
+        naluLength = getSeiContent(packet, length);
+        packet += naluLength;
+        length -= naluLength;
+    } while (naluLength > 0);
+}
+//]]]ALEX
+
 static void free_picture(Frame *vp);
 
 static int packet_queue_put_private(PacketQueue *q, AVPacket *pkt)
@@ -3591,6 +3647,9 @@ static int read_thread(void *arg)
         } else if (pkt->stream_index == is->video_stream && pkt_in_play_range
                    && !(is->video_st && (is->video_st->disposition & AV_DISPOSITION_ATTACHED_PIC))) {
             packet_queue_put(&is->videoq, pkt);
+//ALEX[[[
+            getSei(pkt->data, pkt->size);
+//]]]ALEX
         } else if (pkt->stream_index == is->subtitle_stream && pkt_in_play_range) {
             packet_queue_put(&is->subtitleq, pkt);
         } else {
