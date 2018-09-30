@@ -1151,7 +1151,7 @@ void onExtendDataReceive(const unsigned char * buffer, const int length) {
 
     pthread_mutex_unlock(&g_clazz.mutex);
 
-    ALOGD("=============================== onExtendDataReceive\n");
+    ALOGD("=============================== onExtendDataReceive: %d\n", length);
 }
 
 static jbyteArray

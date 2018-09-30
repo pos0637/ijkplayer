@@ -39,29 +39,39 @@ import android.view.ViewGroup;
 import android.widget.TableLayout;
 import android.widget.TextView;
 
-import tv.danmaku.ijk.media.player.IjkMediaPlayer;
-import tv.danmaku.ijk.media.player.misc.ITrackInfo;
+import java.nio.charset.Charset;
+
 import tv.danmaku.ijk.media.example.R;
 import tv.danmaku.ijk.media.example.application.Settings;
 import tv.danmaku.ijk.media.example.content.RecentMediaStorage;
 import tv.danmaku.ijk.media.example.fragments.TracksFragment;
+import tv.danmaku.ijk.media.example.views.DrawableIjkVideoView;
 import tv.danmaku.ijk.media.example.widget.media.AndroidMediaController;
 import tv.danmaku.ijk.media.example.widget.media.IjkVideoView;
 import tv.danmaku.ijk.media.example.widget.media.MeasureHelper;
+import tv.danmaku.ijk.media.player.IjkMediaPlayer;
+import tv.danmaku.ijk.media.player.misc.ITrackInfo;
 
 public class VideoActivity extends AppCompatActivity implements TracksFragment.ITrackHolder {
     private static final String TAG = "VideoActivity";
-
+    //ALEX[[[
+    Handler handler = new Handler();
+    Runnable runnable = new Runnable() {
+        @Override
+        public void run() {
+            byte[] sei = IjkMediaPlayer.getSEI();
+            Log.d("============== SEI", "SEI: " + ((sei != null) ? new String(sei, Charset.forName("UTF-8")) : "0"));
+            handler.postDelayed(this, 1000);
+        }
+    };
     private String mVideoPath;
-    private Uri    mVideoUri;
-
+    private Uri mVideoUri;
     private AndroidMediaController mMediaController;
-    private IjkVideoView mVideoView;
+    private DrawableIjkVideoView mVideoView;
     private TextView mToastTextView;
     private TableLayout mHudView;
     private DrawerLayout mDrawerLayout;
     private ViewGroup mRightDrawer;
-
     private Settings mSettings;
     private boolean mBackPressed;
 
@@ -138,7 +148,7 @@ public class VideoActivity extends AppCompatActivity implements TracksFragment.I
         IjkMediaPlayer.loadLibrariesOnce(null);
         IjkMediaPlayer.native_profileBegin("libijkplayer.so");
 
-        mVideoView = (IjkVideoView) findViewById(R.id.video_view);
+        mVideoView = (DrawableIjkVideoView) findViewById(R.id.video_view);
         mVideoView.setMediaController(mMediaController);
         mVideoView.setHudView(mHudView);
         // prefer mVideoPath
@@ -254,16 +264,5 @@ public class VideoActivity extends AppCompatActivity implements TracksFragment.I
 
         return mVideoView.getSelectedTrack(trackType);
     }
-
-    //ALEX[[[
-    Handler handler = new Handler();
-    Runnable runnable = new Runnable() {
-        @Override
-        public void run() {
-            byte[] sei = IjkMediaPlayer.getSEI();
-            Log.d("============== SEI", "SEI: " + ((sei != null)? String.valueOf(sei.length): "0"));
-            handler.postDelayed(this, 1000);
-        }
-    };
     //]]]ALEX
 }

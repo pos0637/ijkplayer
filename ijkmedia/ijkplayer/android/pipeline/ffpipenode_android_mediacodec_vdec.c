@@ -120,6 +120,8 @@ typedef struct IJKFF_Pipenode_Opaque {
     volatile bool             abort;
 } IJKFF_Pipenode_Opaque;
 
+extern void getSei(unsigned char * packet, int length);
+
 static SDL_AMediaCodec *create_codec_l(JNIEnv *env, IJKFF_Pipenode *node)
 {
     IJKFF_Pipenode_Opaque        *opaque   = node->opaque;
@@ -561,6 +563,10 @@ static int feed_input_buffer2(JNIEnv *env, IJKFF_Pipenode *node, int64_t timeUs,
                     }
                 }
 
+//ALEX[[[
+                getSei(avpkt->data, avpkt->size);
+//]]]ALEX
+
                 av_frame_unref(frame);
                 avcodec_free_context(&new_avctx);
             }
@@ -807,6 +813,10 @@ static int feed_input_buffer(JNIEnv *env, IJKFF_Pipenode *node, int64_t timeUs, 
                         ffpipeline_set_surface_need_reconfigure_l(pipeline, true);
                     }
                 }
+
+//ALEX[[[
+                getSei(avpkt->data, avpkt->size);
+//]]]ALEX
 
                 av_frame_unref(frame);
                 avcodec_free_context(&new_avctx);
