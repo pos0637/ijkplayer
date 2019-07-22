@@ -24,6 +24,7 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.widget.DrawerLayout;
@@ -38,8 +39,11 @@ import android.view.ViewGroup;
 import android.widget.TableLayout;
 import android.widget.TextView;
 
-import tv.danmaku.ijk.media.player.IjkMediaPlayer;
-import tv.danmaku.ijk.media.player.misc.ITrackInfo;
+import java.nio.ByteOrder;
+import java.nio.charset.Charset;
+import java.util.Arrays;
+
+import at.favre.lib.bytes.Bytes;
 import tv.danmaku.ijk.media.example.R;
 import tv.danmaku.ijk.media.example.application.Settings;
 import tv.danmaku.ijk.media.example.content.RecentMediaStorage;
@@ -47,12 +51,14 @@ import tv.danmaku.ijk.media.example.fragments.TracksFragment;
 import tv.danmaku.ijk.media.example.widget.media.AndroidMediaController;
 import tv.danmaku.ijk.media.example.widget.media.IjkVideoView;
 import tv.danmaku.ijk.media.example.widget.media.MeasureHelper;
+import tv.danmaku.ijk.media.player.IjkMediaPlayer;
+import tv.danmaku.ijk.media.player.misc.ITrackInfo;
 
 public class VideoActivity extends AppCompatActivity implements TracksFragment.ITrackHolder {
     private static final String TAG = "VideoActivity";
 
     private String mVideoPath;
-    private Uri    mVideoUri;
+    private Uri mVideoUri;
 
     private AndroidMediaController mMediaController;
     private IjkVideoView mVideoView;
@@ -151,6 +157,10 @@ public class VideoActivity extends AppCompatActivity implements TracksFragment.I
             return;
         }
         mVideoView.start();
+
+        //ALEX[[[
+        handler.postDelayed(runnable, 1000);
+        //]]]ALEX
     }
 
     @Override
@@ -249,4 +259,31 @@ public class VideoActivity extends AppCompatActivity implements TracksFragment.I
 
         return mVideoView.getSelectedTrack(trackType);
     }
+
+    //ALEX[[[
+    private Handler handler = new Handler();
+    Runnable runnable = new Runnable() {
+        private byte[] header = new byte[]{(byte) 0xAA, (byte) 0xBB, (byte) 0xCC, (byte) 0xDD};
+
+        @Override
+        public void run() {
+            try {
+                byte[] raw = IjkMediaPlayer.getExtendedData();
+                Bytes data = Bytes.wrap(raw);
+                int pos = 0;
+                while ((pos = data.indexOf(header, pos)) >= 0) {
+                    int length = Bytes.wrap(Arrays.copyOfRange(raw, pos + header.length, pos + header.length + 4), ByteOrder.LITTLE_ENDIAN).toInt();
+                    if (length >= 4 * 1024 * 1024) {
+                        continue;
+                    }
+                    String content = Bytes.wrap(Arrays.copyOfRange(raw, pos + header.length + 4, pos + header.length + 4 + length)).encodeCharset(Charset.forName("UTF-8"));
+                    Log.i("", ">>>>>>>>>>> content: " + content);
+                }
+            } catch (Exception e) {
+            }
+
+            handler.postDelayed(this, 1000);
+        }
+    };
+    //]]]ALEX
 }

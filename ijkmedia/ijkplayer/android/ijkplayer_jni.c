@@ -1127,8 +1127,54 @@ LABEL_RETURN:
     return;
 }
 
+//ALEX[[[
+static unsigned char * sExtenedData;
+static jsize sExtenedDataLength;
 
+void onExtendedDataReceive(const unsigned char * buffer, const int length) {
+    if (!buffer || (length <= 0))
+        return;
 
+    pthread_mutex_lock(&g_clazz.mutex);
+
+    if (length > sExtenedDataLength) {
+        if (sExtenedData)
+            free(sExtenedData);
+
+        sExtenedData = malloc(length);
+        if (!sExtenedData) {
+            pthread_mutex_unlock(&g_clazz.mutex);
+            return;
+        }
+    }
+
+    memcpy(sExtenedData, buffer, length);
+    sExtenedDataLength = length;
+
+    pthread_mutex_unlock(&g_clazz.mutex);
+
+    ALOGD(">>>>>>>> onExtendedDataReceive: %d\n", length);
+}
+
+static jbyteArray
+IjkMediaPlayer_getExtendedData(JNIEnv *env, jobject thiz)
+{
+    ALOGD("getExtendedData\n");
+
+    pthread_mutex_lock(&g_clazz.mutex);
+    if (!sExtenedData) {
+        pthread_mutex_unlock(&g_clazz.mutex);
+        return NULL;
+    }
+
+    jbyteArray array = (*env)->NewByteArray(env, sExtenedDataLength);
+    (*env)->SetByteArrayRegion(env, array, 0, sExtenedDataLength, (jbyte*)sExtenedData);
+
+    pthread_mutex_unlock(&g_clazz.mutex);
+
+    return array;
+}
+//]]]ALEX
 
 
 // ----------------------------------------------------------------------------
@@ -1180,6 +1226,9 @@ static JNINativeMethod g_methods[] = {
 
     { "native_setLogLevel",     "(I)V",                     (void *) IjkMediaPlayer_native_setLogLevel },
     { "_setFrameAtTime",        "(Ljava/lang/String;JJII)V", (void *) IjkMediaPlayer_setFrameAtTime },
+//ALEX[[[
+    { "_getExtendedData",       "()[B",                      (void *) IjkMediaPlayer_getExtendedData },
+//]]]ALEX
 };
 
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)

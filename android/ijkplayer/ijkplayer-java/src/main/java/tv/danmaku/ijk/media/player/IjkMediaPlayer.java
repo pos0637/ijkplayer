@@ -256,6 +256,14 @@ public final class IjkMediaPlayer extends AbstractMediaPlayer {
      */
     private native void _setVideoSurface(Surface surface);
 
+    //ALEX[[[
+    private static native byte[] _getExtendedData();
+
+    public static byte[] getExtendedData() {
+        return _getExtendedData();
+    }
+    //]]]ALEX
+
     /**
      * Sets the {@link SurfaceHolder} to use for displaying the video portion of
      * the media.

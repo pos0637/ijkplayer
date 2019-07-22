@@ -595,6 +595,7 @@ static int decoder_decode_frame(FFPlayer *ffp, Decoder *d, AVFrame *frame, AVSub
                                 uint8_t* data = av_malloc(temp.size);
                                 memcpy(data, temp.data, temp.size);
                                 frame->opaque_ref = av_buffer_create(data, temp.size, NULL, NULL, 0);
+                                av_packet_unref(&temp);
                             }
                             //]]]ALEX
                         }
@@ -895,6 +896,10 @@ static size_t parse_ass_subtitle(const char *ass, char *output)
     return 0;
 }
 
+//ALEX[[[
+extern void onExtendedDataReceive(const unsigned char * buffer, const int length);
+//]]]ALEX
+
 static void video_image_display2(FFPlayer *ffp)
 {
     VideoState *is = ffp->is;
@@ -954,7 +959,10 @@ static void video_image_display2(FFPlayer *ffp)
         }
 
         //ALEX[[[
-        ALOGI("video_image_display2: 0x%x\n", (void*)vp->frame->opaque_ref);
+        if ((vp->frame != NULL) && (vp->frame->opaque_ref != NULL)) {
+            ALOGI("video_image_display2: 0x%x\n", (void*)vp->frame->opaque_ref);
+            onExtendedDataReceive(vp->frame->opaque_ref->data, vp->frame->opaque_ref->size);
+        }
         //]]]ALEX
     }
 }

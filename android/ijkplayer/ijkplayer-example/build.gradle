@@ -72,4 +72,6 @@ dependencies {
     // arm64Compile project(':player-arm64')
     // x86Compile project(':player-x86')
     // x86_64Compile project(':player-x86_64')
+
+    compile group: 'at.favre.lib', name: 'bytes', version: '1.2.0'
 }
