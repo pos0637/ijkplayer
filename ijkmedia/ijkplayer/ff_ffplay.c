@@ -565,14 +565,19 @@ fail0:
 
 static int decoder_decode_frame(FFPlayer *ffp, Decoder *d, AVFrame *frame, AVSubtitle *sub) {
     int ret = AVERROR(EAGAIN);
-
+    //ALEX[[[
+    AVPacket temp;
+    av_init_packet(&temp);
+    //]]ALEX
     for (;;) {
         AVPacket pkt;
 
         if (d->queue->serial == d->pkt_serial) {
             do {
-                if (d->queue->abort_request)
+                if (d->queue->abort_request) {
+                    av_packet_unref(&temp);
                     return -1;
+                }
 
                 switch (d->avctx->codec_type) {
                     case AVMEDIA_TYPE_VIDEO:
@@ -584,6 +589,14 @@ static int decoder_decode_frame(FFPlayer *ffp, Decoder *d, AVFrame *frame, AVSub
                             } else if (!ffp->decoder_reorder_pts) {
                                 frame->pts = frame->pkt_dts;
                             }
+
+                            //ALEX[[[ 
+                            if (temp.data != NULL) {
+                                uint8_t* data = av_malloc(temp.size);
+                                memcpy(data, temp.data, temp.size);
+                                frame->opaque_ref = av_buffer_create(data, temp.size, NULL, NULL, 0);
+                            }
+                            //]]]ALEX
                         }
                         break;
                     case AVMEDIA_TYPE_AUDIO:
@@ -606,10 +619,13 @@ static int decoder_decode_frame(FFPlayer *ffp, Decoder *d, AVFrame *frame, AVSub
                 if (ret == AVERROR_EOF) {
                     d->finished = d->pkt_serial;
                     avcodec_flush_buffers(d->avctx);
+                    av_packet_unref(&temp);
                     return 0;
                 }
-                if (ret >= 0)
+                if (ret >= 0) {
+                    av_packet_unref(&temp);
                     return 1;
+                }
             } while (ret != AVERROR(EAGAIN));
         }
 
@@ -620,8 +636,10 @@ static int decoder_decode_frame(FFPlayer *ffp, Decoder *d, AVFrame *frame, AVSub
                 av_packet_move_ref(&pkt, &d->pkt);
                 d->packet_pending = 0;
             } else {
-                if (packet_queue_get_or_buffering(ffp, d->queue, &pkt, &d->pkt_serial, &d->finished) < 0)
+                if (packet_queue_get_or_buffering(ffp, d->queue, &pkt, &d->pkt_serial, &d->finished) < 0) {
+                    av_packet_unref(&temp);
                     return -1;
+                }
             }
         } while (d->queue->serial != d->pkt_serial);
 
@@ -644,6 +662,11 @@ static int decoder_decode_frame(FFPlayer *ffp, Decoder *d, AVFrame *frame, AVSub
                     ret = got_frame ? 0 : (pkt.data ? AVERROR(EAGAIN) : AVERROR_EOF);
                 }
             } else {
+                //ALEX[[[
+                av_packet_unref(&temp);
+                av_packet_ref(&temp, &pkt);
+                //]]]ALEX
+
                 if (avcodec_send_packet(d->avctx, &pkt) == AVERROR(EAGAIN)) {
                     av_log(d->avctx, AV_LOG_ERROR, "Receive_frame and send_packet both returned EAGAIN, which is an API violation.\n");
                     d->packet_pending = 1;
@@ -653,6 +676,9 @@ static int decoder_decode_frame(FFPlayer *ffp, Decoder *d, AVFrame *frame, AVSub
             av_packet_unref(&pkt);
         }
     }
+    //ALEX[[[
+    av_packet_unref(&temp);
+    //]]]ALEX
 }
 
 static void decoder_destroy(Decoder *d) {
@@ -926,6 +952,10 @@ static void video_image_display2(FFPlayer *ffp)
                 }
             }
         }
+
+        //ALEX[[[
+        ALOGI("video_image_display2: 0x%x\n", (void*)vp->frame->opaque_ref);
+        //]]]ALEX
     }
 }
 
@@ -1671,9 +1701,11 @@ static int queue_picture(FFPlayer *ffp, AVFrame *src_frame, double pts, double d
         vp->bmp->sar_num = vp->sar.num;
         vp->bmp->sar_den = vp->sar.den;
 
-#ifdef FFP_MERGE
+//ALEX[[[
+// #ifdef FFP_MERGE
         av_frame_move_ref(vp->frame, src_frame);
-#endif
+// #endif
+//]]]ALEX
         frame_queue_push(&is->pictq);
         if (!is->viddec.first_frame_decoded) {
             ALOGD("Video: first frame decoded\n");
