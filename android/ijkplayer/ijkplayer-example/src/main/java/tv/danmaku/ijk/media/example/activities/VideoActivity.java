@@ -264,6 +264,7 @@ public class VideoActivity extends AppCompatActivity implements TracksFragment.I
     private Handler handler = new Handler();
     Runnable runnable = new Runnable() {
         private byte[] header = new byte[]{(byte) 0xAA, (byte) 0xBB, (byte) 0xCC, (byte) 0xDD};
+        private String temp = "";
 
         @Override
         public void run() {
@@ -276,8 +277,14 @@ public class VideoActivity extends AppCompatActivity implements TracksFragment.I
                     if (length >= 4 * 1024 * 1024) {
                         continue;
                     }
+
                     String content = Bytes.wrap(Arrays.copyOfRange(raw, pos + header.length + 4, pos + header.length + 4 + length)).encodeCharset(Charset.forName("UTF-8"));
-                    Log.i("", ">>>>>>>>>>> content: " + content);
+                    if (!temp.equals(content)) {
+                        Log.i("", ">>>>>>>>>>> content: " + content);
+                        temp = content;
+                    }
+
+                    pos += header.length + 4 + length;
                 }
             } catch (Exception e) {
             }

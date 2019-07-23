@@ -1159,7 +1159,7 @@ void onExtendedDataReceive(const unsigned char * buffer, const int length) {
 static jbyteArray
 IjkMediaPlayer_getExtendedData(JNIEnv *env, jobject thiz)
 {
-    ALOGD("getExtendedData\n");
+    ALOGD("getExtendedData: %d\n", sExtenedDataLength);
 
     pthread_mutex_lock(&g_clazz.mutex);
     if (!sExtenedData) {

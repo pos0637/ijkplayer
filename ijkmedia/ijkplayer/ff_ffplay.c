@@ -590,7 +590,7 @@ static int decoder_decode_frame(FFPlayer *ffp, Decoder *d, AVFrame *frame, AVSub
                                 frame->pts = frame->pkt_dts;
                             }
 
-                            //ALEX[[[ 
+                            //ALEX[[[
                             if (temp.data != NULL) {
                                 uint8_t* data = av_malloc(temp.size);
                                 memcpy(data, temp.data, temp.size);
@@ -663,16 +663,16 @@ static int decoder_decode_frame(FFPlayer *ffp, Decoder *d, AVFrame *frame, AVSub
                     ret = got_frame ? 0 : (pkt.data ? AVERROR(EAGAIN) : AVERROR_EOF);
                 }
             } else {
-                //ALEX[[[
-                av_packet_unref(&temp);
-                av_packet_ref(&temp, &pkt);
-                //]]]ALEX
-
                 if (avcodec_send_packet(d->avctx, &pkt) == AVERROR(EAGAIN)) {
                     av_log(d->avctx, AV_LOG_ERROR, "Receive_frame and send_packet both returned EAGAIN, which is an API violation.\n");
                     d->packet_pending = 1;
                     av_packet_move_ref(&d->pkt, &pkt);
                 }
+
+                //ALEX[[[
+                av_packet_unref(&temp);
+                av_packet_move_ref(&temp, &pkt);
+                //]]]ALEX
             }
             av_packet_unref(&pkt);
         }
